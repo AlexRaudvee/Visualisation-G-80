@@ -2,7 +2,7 @@ import os
 import requests
 
 # Define the URL of the .xlsx file and the directory path
-url = 'https://zenodo.org/records/11334212/files/Australian%20Shark-Incident%20Database%20Public%20Version.xlsx?download=1'  # Replace with the actual URL
+url = 'https://zenodo.org/records/11334212/files/Australian%20Shark-Incident%20Database%20Public%20Version.xlsx?download=1'  
 save_directory = './data'
 file_name = 'shark_data.xlsx'
 
