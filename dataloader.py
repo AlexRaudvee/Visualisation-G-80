@@ -45,3 +45,50 @@ try:
 except Exception as e:
     # Handle any exceptions that occur during the conversion process
     print(f"An error occurred during conversion: {e}")
+
+
+# Define the path to the CSV file containing shark data
+csv_file_path = "data/shark_data.csv"
+
+try:
+    # Attempt to load the .csv file into a DataFrame
+    df = pd.read_csv(csv_file_path)
+    print("CSV file loaded successfully into DataFrame")
+    # st.dataframe(df)  # Display the first few rows of the DataFrame in Streamlit
+
+except Exception as e:
+    # Handle errors if loading the CSV fails
+    print(f"An error occurred while loading the CSV: {e}")
+
+# Filter out unnecessary columns from the DataFrame
+df = df.loc[:, ~df.columns.isin(["Site.category.comment", "Shark.identification.source", "Tidal.cycle", "Weather.condition",
+                                "Fish.speared?", "Commercial.dive.activity", "Object.of.bite", 
+                                "Direction.first.strike", "Shark.captured", "Other.clothing.colour", 
+                                "Clothing.pattern", "Fin.colour", "Diversionary.action.taken", "Diversionary.action.outcome",
+                                "People <3m", "People 3-15m", "Unnamed: 59"])]  
+
+# Filter out rows based on the threshold for missing values
+threshold = 0.1  # Define a threshold for the proportion of missing data (7.5%)
+
+# Calculate the maximum number of rows allowed to have missing values based on the threshold
+total_rows = len(df)
+max_missing = total_rows * threshold
+
+# Identify columns where the count of NaNs is below the threshold
+columns_to_filter = [col for col in df.columns if df[col].isna().sum() < max_missing]
+
+# Drop rows where selected columns have NaN values
+df = df.dropna(subset=columns_to_filter)
+
+
+# Convert latitude and longitude to numeric (float)
+try:
+    df["latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")  # Convert to float, invalid entries become NaN
+    df["longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")  # Convert to float, invalid entries become NaN
+except Exception as e:
+    print(f"Error converting latitude/longitude to numeric: {e}")
+
+# Drop rows with missing or invalid latitude/longitude values
+df = df.dropna(subset=["latitude", "longitude"])
+
+df.to_csv("./data/shark_data.csv")
