@@ -15,13 +15,42 @@ from streamlit_plotly_events import plotly_events  # For handling plotly events 
 
 st.set_page_config(layout='wide')
 
-# PREPARATION OF DATA
 
+# GLOBAL VARS
 st.session_state["DF"] = pd.read_csv("./data/shark_data.csv")
-
-# Initialize a Folium map centered at the mean latitude and longitude of the dataset
 center_lat = st.session_state["DF"]["latitude"].mean()
 center_lon = st.session_state["DF"]["longitude"].mean()
+print(st.session_state["DF"].columns)
+min_year = int(st.session_state["DF"]['Incident.year'].min())
+max_year = int(st.session_state["DF"]['Incident.year'].max())
+
+
+# SIDEBAR AT THE LEFT
+with st.sidebar:
+    st.write("### Filter by Year Range")
+    year_range = st.slider(
+        "Select Year Range:",
+        min_value=min_year,
+        max_value=max_year,
+        value=(min_year, max_year),  # Default range: full range of years
+        step=1
+    )
+    
+
+# PREPARATION OF DATA
+st.session_state["DF"]['Incident.year'] = pd.to_numeric(st.session_state["DF"]['Incident.year'], errors='coerce')
+
+# Filter the DataFrame based on the selected year range
+st.session_state["DF"] = st.session_state["DF"][
+    (st.session_state["DF"]['Incident.year'] >= year_range[0]) &
+    (st.session_state["DF"]['Incident.year'] <= year_range[1])
+]
+
+# Prepare data for heatmap
+heat_data = st.session_state["DF"][['latitude', 'longitude']].values
+
+
+# BUILD THE MAP WITH LAYERS 
 st.session_state['m'] = folium.Map(location=[center_lat, center_lon], zoom_start=8)
 
 # Add markers for each point in the filtered DataFrame
@@ -35,13 +64,9 @@ for _, row in st.session_state["DF"].iterrows():
         **kw
         ))
 
-
 fg = folium.FeatureGroup(name="Markers")
 for marker in st.session_state["markers"]:
     fg.add_child(marker)
-
-# Prepare data for heatmap
-heat_data = st.session_state["DF"][['latitude', 'longitude']].values
 
 # Add heatmap layer
 HeatMap(heat_data, radius=10).add_to(st.session_state["m"])
@@ -50,7 +75,8 @@ HeatMap(heat_data, radius=10).add_to(st.session_state["m"])
 draw = Draw(export=True)
 draw.add_to(st.session_state["m"])
 
-# Display the map in Streamlit
+
+# DISPLAYING AND INTERACTION
 st.subheader("Interactive Map")
 st_data = st_folium(st.session_state['m'],
                     center=None,
