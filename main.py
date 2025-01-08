@@ -8,7 +8,7 @@ import seaborn as sns                   # Seaborn for statistical data visualiza
 import streamlit as st                  # Streamlit for building the web app
 import plotly.express as px             # Plotly Express for creating interactive charts
 import matplotlib.pyplot as plt         # Matplotlib for static plots (not used in this code)
-
+from datetime import datetime
 from streamlit_plotly_events import plotly_events  # For handling plotly events in Streamlit
 
 # Define the path to the CSV file containing shark data
@@ -18,6 +18,10 @@ try:
     # Attempt to load the .csv file into a DataFrame
     df = pd.read_csv(csv_file_path)
     print("CSV file loaded successfully into DataFrame")
+    ## We take into account only the last 40 years (Life-time of shark)
+    ##TODO: Discuss if it should be 30 years instead, depends on existing online resources.
+    current_year = datetime.now().year
+    df = df[df['Incident.year'] > (current_year - 40)]
     # st.dataframe(df)  # Display the first few rows of the DataFrame in Streamlit
 
 except Exception as e:
@@ -36,7 +40,17 @@ st.write(df.dtypes)
 # Section for displaying missing values and summary statistics
 st.subheader("Missing Values and Summary Statistics")
 st.write("**Number of NaN values per column:**")  
-st.write(df.isna().sum())  
+# Calculate and display both count and percentage of NaN values
+nan_counts = df.isna().sum()
+nan_percentages = (df.isna().sum() / len(df) * 100).round(2)
+
+st.write("**Number of NaN values per column:**")
+nan_info = pd.DataFrame({
+    'Count': nan_counts,
+    'Percentage': nan_percentages.apply(lambda x: f"{x}%")
+})
+nan_info = nan_info.sort_values('Count')  # Sort ascending
+st.write(nan_info)
 
 st.write("**Summary Statistics:**")  
 st.write(df.describe(include='all'))  
