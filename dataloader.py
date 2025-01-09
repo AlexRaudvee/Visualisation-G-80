@@ -4,6 +4,11 @@ import requests
 
 import pandas as pd
 
+from datetime import datetime           # For temporal operations
+
+
+
+# GLOBAL VARIABLES
 # Define the URL of the .xlsx file and the directory path to save the file
 url = 'https://zenodo.org/records/11334212/files/Australian%20Shark-Incident%20Database%20Public%20Version.xlsx?download=1'  
 save_directory = './data'  # Directory where the downloaded file will be saved
@@ -14,6 +19,48 @@ os.makedirs(save_directory, exist_ok=True)
 
 # Define the complete path where the file will be saved
 file_path = os.path.join(save_directory, file_name)
+
+
+
+### FUNCTIONS ###
+def remove_high_nan_columns(df: pd.DataFrame, threshold: float = 0.92) -> pd.DataFrame:
+    """Remove columns with NaN percentage above threshold."""
+    nan_percentages = df.isna().mean()
+    columns_to_keep = nan_percentages[nan_percentages < threshold].index
+    return df[columns_to_keep]
+
+def clean_coordinates(x):
+    """Clean coordinate strings and convert to float."""
+    if pd.isna(x):
+        return None
+    try:
+        # Remove °, ', " and convert to float
+        return float(str(x).replace('°', '').replace("'", '').replace('"', '').strip())
+    except:
+        return None
+    
+def load_and_clean_data(df):
+    try:
+        df = df
+
+        # Filter for last 40 years
+        current_year = datetime.now().year
+        df = df[df['Incident.year'] > (current_year - 40)]
+
+        # Remove high-NaN columns
+        df = remove_high_nan_columns(df)
+
+        # Clean and convert coordinates
+        df['Latitude'] = df['Latitude'].apply(clean_coordinates)
+        df['Longitude'] = df['Longitude'].apply(clean_coordinates)
+
+        # Remove rows with invalid coordinates
+        df = df.dropna(subset=['Latitude', 'Longitude'])
+
+        return df
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return None
 
 # Download the .xlsx file from the specified URL
 try:
@@ -60,7 +107,9 @@ except Exception as e:
     # Handle errors if loading the CSV fails
     print(f"An error occurred while loading the CSV: {e}")
 
-# Filter out unnecessary columns from the DataFrame
+
+
+# FIRST STAGE CLEANING OF THE DATA
 df = df.loc[:, ~df.columns.isin(["Site.category.comment", "Shark.identification.source", "Tidal.cycle", "Weather.condition",
                                 "Fish.speared?", "Commercial.dive.activity", "Object.of.bite", 
                                 "Direction.first.strike", "Shark.captured", "Other.clothing.colour", 
@@ -91,4 +140,11 @@ except Exception as e:
 # Drop rows with missing or invalid latitude/longitude values
 df = df.dropna(subset=["latitude", "longitude"])
 
+
+
+# SECONDARY CLEANING OF THE DATA
+df = load_and_clean_data(df)
+
 df.to_csv("./data/shark_data.csv")
+
+print("Process Exit Code: 1 (success)")

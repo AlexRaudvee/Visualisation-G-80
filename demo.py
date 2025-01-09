@@ -1,32 +1,28 @@
+import plotly.graph_objects as go
 import streamlit as st
-import folium
-from streamlit_folium import folium_static, st_folium
-from folium.plugins import MarkerCluster
-from dataloader import df
+import pandas as pd
 
-st.session_state['df'] = df
+df = pd.read_csv("https://raw.githubusercontent.com/bcdunbar/datasets/master/iris.csv")
 
-center_lat = st.session_state["df"]["latitude"].mean()
-center_lon = st.session_state["df"]["longitude"].mean()
-
-def create_map():
-    if 'map' not in st.session_state or st.session_state.map is None:
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=8)
-        
-        marker_cluster = MarkerCluster().add_to(m)
-        # Add markers for each point in the filtered DataFrame
-        for _, row in st.session_state['df'].iterrows():
-            folium.Marker(location=[row["latitude"], row["longitude"]],
-                          popup=f"Latitude: {row['latitude']}, Longitude: {row['longitude']}",
-                          tooltip="Click for more info").add_to(marker_cluster)
-        
-        st.session_state.map = m  # Save the map in the session state
-        
-    return st.session_state.map
+fig = go.Figure(data=
+    go.Parcoords(
+        line = dict(color = df['species_id'],
+                   colorscale = [[0,'purple'],[0.5,'lightseagreen'],[1,'gold']]),
+        dimensions = list([
+            dict(range = [0,8],
+                constraintrange = [4,8],
+                label = 'Sepal Length', values = df['sepal_length']),
+            dict(range = [0,8],
+                label = 'Sepal Width', values = df['sepal_width']),
+            dict(range = [0,8],
+                label = 'Petal Length', values = df['petal_length']),
+            dict(range = [0,8],
+                label = 'Petal Width', values = df['petal_width'])
+        ])
+    )
+)
 
 
-def show_map():
-    m = create_map()  # Get or create the map
-    st_folium(m)
-
-show_map()
+fig.show()
+ret = st.plotly_chart(fig, use_container_width=True, on_select='rerun')
+st.write(ret)
