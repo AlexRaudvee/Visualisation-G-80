@@ -113,8 +113,8 @@ map_select_data = st_folium(st.session_state['m'],
                     key="new",
                     returned_objects=["last_object_clicked_tooltip", "last_object_clicked", "last_object_clicked_popup", "last_active_drawing"],
                     feature_group_to_add=fg,
-                    height=550,
-                    width=1000)
+                    height=700,
+                    width=1400)
 
 points_in_region_map = None
 selected_point_map = None
@@ -166,7 +166,7 @@ if "selected_indices_2" not in st.session_state:
 
 # First column: Attribute selection and histogram
 with col1:
-    attr1 = st.selectbox("Select Attribute for Column 1", attributes, key="attr1")
+    attr1 = st.selectbox("Select Attribute for Column 1", attributes, key="attr1", index=17)
     filtered_data_1 = (
         st.session_state["DF"].iloc[st.session_state["selected_indices_2"]]
         if st.session_state["selected_indices_2"]
@@ -179,7 +179,7 @@ with col1:
 
 # Second column: Attribute selection and histogram
 with col2:
-    attr2 = st.selectbox("Select Attribute for Column 2", attributes, key="attr2")
+    attr2 = st.selectbox("Select Attribute for Column 2", attributes, key="attr2", index=22)
     filtered_data_2 = (
         st.session_state["DF"].iloc[st.session_state["selected_indices_1"]]
         if st.session_state["selected_indices_1"]
