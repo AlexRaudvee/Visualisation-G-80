@@ -24,6 +24,21 @@ def remove_high_nan_columns(df: pd.DataFrame, threshold: float = 0.92) -> pd.Dat
     return df[columns_to_keep]
 
 
+def get_low_nan_columns(df: pd.DataFrame, threshold: float = 0.05) -> list:
+    """
+    Identify columns with NaN percentage below the threshold.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        threshold (float): Maximum acceptable NaN percentage (default: 0.05 or 5%)
+
+    Returns:
+        list: Column names with NaN percentage below threshold
+    """
+    nan_percentages = df.isna().sum() / len(df)
+    return list(nan_percentages[nan_percentages < threshold].index)
+
+
 # Set page config
 st.set_page_config(layout="wide")
 
@@ -59,12 +74,19 @@ def load_and_clean_data():
         # Remove high-NaN columns
         df = remove_high_nan_columns(df)
 
+
+
         # Clean and convert coordinates
         df['Latitude'] = df['Latitude'].apply(clean_coordinates)
         df['Longitude'] = df['Longitude'].apply(clean_coordinates)
 
         # Remove rows with invalid coordinates
         df = df.dropna(subset=['Latitude', 'Longitude'])
+
+        low_nan_columns = get_low_nan_columns(df, threshold=0.05)
+        df = df.dropna(subset=low_nan_columns)
+
+
 
         return df
     except Exception as e:
@@ -116,7 +138,8 @@ filtered_df = df[(df['Incident.year'] >= year_range[0]) &
 
 # Main layout
 col1, col2 = st.columns([2, 1])
-##TODO: Map has data points in the middle of the map, investigate NaN of coordinates.
+##TODO: Add Latidude and Long at Description when each point it clicked (&KID) & Add the fucked up points to a config file
+
 with col1:
     st.header("Shark Attack Locations")
 
