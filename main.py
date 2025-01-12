@@ -39,29 +39,12 @@ with st.sidebar:
         value=(int(st.session_state["DF"]['Incident.year'].min()), int(st.session_state["DF"]['Incident.year'].max()))
     )
 
-    # Attribute selectors
-    st.subheader("Bar Chart Attributes")
-    categorical_cols = st.session_state["DF"].select_dtypes(include=['object']).columns.tolist()
-    selected_bar_attr = st.multiselect(
-        "Select attributes for Bar Chart",
-        categorical_cols,
-        default=['Victim.activity', 'Injury.severity'] if 'Victim.activity' in categorical_cols else None
-    )
-
-    st.subheader("PCP Attributes")
-    numeric_cols = st.session_state["DF"].select_dtypes(include=['float64', 'int64']).columns.tolist()
-    selected_pcp_attr = st.multiselect(
-        "Select attributes for Parallel Coordinates",
-        numeric_cols,
-        default=['Victim.age', 'Shark.length.m'] if 'Victim.age' in numeric_cols else None
-    )
-
 # Filter data based on time range
 st.session_state['DF'] = st.session_state["DF"][(st.session_state["DF"]['Incident.year'] >= year_range[0]) &
                  (st.session_state["DF"]['Incident.year'] <= year_range[1])]
 
-    
 
+    
 # PREPARATION OF DATA
 st.session_state["DF"]['Incident.year'] = pd.to_numeric(st.session_state["DF"]['Incident.year'], errors='coerce')
 
@@ -73,6 +56,7 @@ st.session_state["DF"] = st.session_state["DF"][
 
 # Prepare data for heatmap
 heat_data = st.session_state["DF"][['latitude', 'longitude']].values
+
 
 
 # BUILD THE MAP WITH LAYERS 
@@ -100,8 +84,7 @@ HeatMap(heat_data, radius=10).add_to(st.session_state["m"])
 draw = Draw(export=True)
 draw.add_to(st.session_state["m"])
 
-# Main layout
-col1, col2 = st.columns([2, 1])
+
 
 # DISPLAYING AND INTERACTION
 
@@ -132,8 +115,8 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
             (st.session_state["DF"]["longitude"].between(target_lon - tolerance, target_lon + tolerance))
         ]
         # Display the filtered points
-        st.write(f"Point clicked")
-        st.write(selected_point_map)
+        # st.write(f"Point clicked")
+        # st.write(selected_point_map)
         
     else:
         selected_region_map = map_select_data['last_active_drawing']['geometry']['coordinates'][0]
@@ -147,8 +130,8 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
         points_in_region_map = st.session_state["DF"][st.session_state["DF"]['is_in_region']]
 
         # Display the filtered points
-        st.write(f"Number of points in the selected region: {len(points_in_region_map)}")
-        st.write(points_in_region_map)
+        # st.write(f"Number of points in the selected region: {len(points_in_region_map)}")
+        # st.write(points_in_region_map)
 
 
 # THE BARS
@@ -179,7 +162,7 @@ with col1:
 
 # Second column: Attribute selection and histogram
 with col2:
-    attr2 = st.selectbox("Select Attribute for Column 2", attributes, key="attr2", index=22)
+    attr2 = st.selectbox("Select Attribute for Column 2", attributes, key="attr2", index=17)
     filtered_data_2 = (
         st.session_state["DF"].iloc[st.session_state["selected_indices_1"]]
         if st.session_state["selected_indices_1"]
@@ -191,116 +174,5 @@ with col2:
     st.session_state["selected_indices_2"] = indices_bar_2
                 
 ##TODO: PCP Is shit, update it.
-# PCP Plot below map
-if selected_pcp_attr:
-    st.subheader("Parallel Coordinates Plot")
+# PCP Plot below 
 
-    """
-    Creates an interactive Parallel Coordinates Plot (PCP) for multivariate data analysis.
-    The PCP allows for visualization and exploration of relationships between multiple variables
-    simultaneously, with color encoding representing the temporal dimension (Incident.year).
-    """
-    
-    # Create the Parallel Coordinates Plot
-    fig = go.Figure(data=
-        go.Parcoords(
-            line_color='blue',
-            dimensions = list([
-                dict(range = [1,5],
-                    constraintrange = [1,2], # change this range by dragging the pink line
-                    label = 'A', values = [1,4]),
-                dict(range = [1.5,5],
-                    tickvals = [1.5,3,4.5],
-                    label = 'B', values = [3,1.5]),
-                dict(range = [1,5],
-                    tickvals = [1,2,4,5],
-                    label = 'C', values = [2,4],
-                    ticktext = ['text 1', 'text 2', 'text 3', 'text 4']),
-                dict(range = [1,5],
-                    label = 'D', values = [4,2])
-            ])
-        )
-    )
-
-
-
-    # Display the plot in Streamlit with configuration
-    return_ = st.plotly_chart(
-        figure_or_data=fig,
-        use_container_width=True,
-        on_select='rerun',
-        theme='streamlit',
-    )
-    
-    st.write(return_)
-
-# Display data statistics
-# Display data statistics
-with st.expander("Show Data Statistics"):
-    # DataFrame Overview
-    st.header("DataFrame Overview")
-    st.write("**Shape of the DataFrame:**", filtered_df.shape)
-    st.write("**Data Types:**")
-    st.write(filtered_df.dtypes)
-
-    # Missing Values and Summary Statistics
-    st.subheader("Missing Values and Summary Statistics")
-    st.write("**Number of NaN values per column:**")
-
-    # Calculate and display both count and percentage of NaN values
-    nan_counts = filtered_df.isna().sum()
-    nan_percentages = (filtered_df.isna().sum() / len(filtered_df) * 100).round(2)
-    nan_info = pd.DataFrame({
-        'Count': nan_counts,
-        'Percentage': nan_percentages.apply(lambda x: f"{x}%")
-    })
-    nan_info = nan_info.sort_values('Count')  # Sort ascending
-    st.write(nan_info)
-
-    st.write("**Summary Statistics:**")
-    st.write(filtered_df.describe(include='all'))
-
-    # Cleaned DataFrame
-    st.header("Cleaned a bit dataframe")
-    st.write(filtered_df)
-
-    # Bar Chart for Categorical Columns
-    st.subheader("Bar Chart for Categorical Columns")
-    categorical_cols = filtered_df.select_dtypes(include='object').columns.tolist()
-    selected_cat_col = st.selectbox("Choose a Categorical Column for Bar Chart",
-                                    options=categorical_cols,
-                                    key='stat_cat_col')
-    if selected_cat_col:
-        fig = px.histogram(filtered_df[selected_cat_col],
-                           labels={'index': selected_cat_col, selected_cat_col: 'Count'},
-                           title=f'Bar Chart of {selected_cat_col}')
-        fig.update_layout(xaxis_title=selected_cat_col, yaxis_title='Count')
-        st.plotly_chart(fig)
-
-        # Histogram for Numeric Columns
-    st.subheader("Histogram for Numeric Columns")
-    numeric_cols = filtered_df.select_dtypes(include='number').columns.tolist()
-    selected_num_col = st.selectbox("Choose a Numeric Column for Histogram",
-                                    options=numeric_cols,
-                                    key='stat_num_col')
-    if selected_num_col:
-        fig = px.histogram(filtered_df, x=selected_num_col, nbins=20,
-                           title=f'Histogram of {selected_num_col}',
-                           labels={selected_num_col: selected_num_col})
-        fig.update_layout(xaxis_title=selected_num_col, yaxis_title='Frequency')
-        st.plotly_chart(fig)
-
-        # Scatter Plot
-    st.subheader("Scatter Plot")
-    x_axis = st.selectbox("Choose X-axis (Numeric Column)",
-                          options=numeric_cols,
-                          key='stat_scatter_x')
-    y_axis = st.selectbox("Choose Y-axis (Numeric Column)",
-                          options=numeric_cols,
-                          key='stat_scatter_y')
-
-    if x_axis and y_axis:
-        scatter_fig = px.scatter(filtered_df, x=x_axis, y=y_axis,
-                                 title=f'Scatter Plot of {x_axis} vs {y_axis}')
-        scatter_fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
-        st.plotly_chart(scatter_fig)
