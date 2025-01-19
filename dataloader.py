@@ -23,7 +23,7 @@ file_path = os.path.join(save_directory, file_name)
 
 
 ### FUNCTIONS ###
-def remove_high_nan_columns(df: pd.DataFrame, threshold: float = 0.92) -> pd.DataFrame:
+def remove_high_nan_columns(df: pd.DataFrame, threshold: float = 0.95) -> pd.DataFrame:
     """Remove columns with NaN percentage above threshold."""
     nan_percentages = df.isna().mean()
     columns_to_keep = nan_percentages[nan_percentages < threshold].index
@@ -56,6 +56,7 @@ def load_and_clean_data(df):
 
         # Remove rows with invalid coordinates
         df = df.dropna(subset=['Latitude', 'Longitude'])
+
 
         return df
     except Exception as e:
@@ -140,7 +141,10 @@ except Exception as e:
 # Drop rows with missing or invalid latitude/longitude values
 df = df.dropna(subset=["latitude", "longitude"])
 
-
+# Rename values in the 'Victim.injury' column
+df['Victim.injury'] = df['Victim.injury'].replace(
+    {'Injured': 'injured', 'injury': 'injured'}
+)
 
 # SECONDARY CLEANING OF THE DATA
 df = load_and_clean_data(df)

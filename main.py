@@ -189,6 +189,10 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
 # THE BARS
 
 if st.session_state.REG_2:
+    # Remove 'Unnamed: 0' and 'UIN' columns from the selected regions
+    st.session_state["selected_regions"][0] = st.session_state["selected_regions"][0].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
+    st.session_state["selected_regions"][1] = st.session_state["selected_regions"][1].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
+
     # Display bar charts for two selected regions
     col1, col2 = st.columns(2)
 
@@ -250,7 +254,11 @@ else:
 # Parallel Categories Plot preparation
 def create_parallel_coordinates(dataframe, selected_columns):
     # Define the numerical and categorical columns for the PCP
-    selected_columns = ["Incident.year", "latitude", "longitude"]  # Add/modify relevant columns
+    # selected_columns = ["Incident.year", "latitude", "longitude"]  # Add/modify relevant columns
+    if 'Provoked/unprovoked' in selected_columns: 
+        # Map values in the 'Provoked/unprovoked' column to 1 and 0
+        mapping = {"provoked": 1, "unprovoked": 0}
+        dataframe["Provoked/unprovoked"] = dataframe["Provoked/unprovoked"].str.lower().map(mapping)
 
     # Create the Parallel Coordinates Plot
     fig = go.Figure(
@@ -262,12 +270,28 @@ def create_parallel_coordinates(dataframe, selected_columns):
             ]
         )
     )
-    fig.update_layout(height=400)
+    fig.update_layout(height=300)
     return fig
 
 # PCP Display
+
+# Filter columns to include only numeric types (int and float)
+columns_to_exclude = ["Unnamed: 0", "UIN"]
+columns_for_pcp = [
+    col for col in st.session_state["filtered_df"].select_dtypes(include=["float64", "int64"]).columns
+    if col not in columns_to_exclude
+]
+columns_for_pcp.append("Provoked/unprovoked")
+
 st.subheader("Parallel Coordinates Plot")
-selected_columns = st.multiselect("select the attributes:", options=st.session_state["filtered_df"].columns)
+
+default_columns = ["Shark.length.m", "Victim.age", "Time.in.water.min"]
+selected_columns = st.multiselect(
+    "Select the attributes:",
+    options=columns_for_pcp,  # Use filtered numeric columns for the Parallel Coordinates Plot
+    default=[col for col in default_columns if col in columns_for_pcp]  # Preselect the default columns if they exist
+)
+
 pcp_fig = create_parallel_coordinates(st.session_state["filtered_df"], selected_columns)
-st.plotly_chart(pcp_fig, use_container_width=False)
+st.plotly_chart(pcp_fig, use_container_width=True)
 
