@@ -18,14 +18,16 @@ from streamlit_plotly_events import plotly_events  # For handling plotly events 
 from streamlit_js_eval import streamlit_js_eval
 
 st.set_page_config(layout='wide', 
-                   initial_sidebar_state="collapsed")
-
+                   initial_sidebar_state="collapsed",
+                   )
+theme = {
+    "base": "light"
+}
 
 # GLOBAL VARS
 st.session_state["DF"] = pd.read_csv("./data/shark_data.csv")
 center_lat = st.session_state["DF"]["latitude"].mean()
 center_lon = st.session_state["DF"]["longitude"].mean()
-print(st.session_state["DF"].columns)
 min_year = int(st.session_state["DF"]['Incident.year'].min())
 max_year = int(st.session_state["DF"]['Incident.year'].max())
 
@@ -99,9 +101,27 @@ for _, row in st.session_state["DF"].iterrows():
         ))
 
 fg = folium.FeatureGroup(name="Markers")
-for marker in st.session_state["markers"]:
-    fg.add_child(marker)
+# for marker in st.session_state["markers"]:
+#     fg.add_child(marker)
     
+
+if ("selected_indices_1" and 'value_bar' in st.session_state):
+    
+    filtered_data = st.session_state["DF"][st.session_state["DF"][st.session_state["attr_bar"]].isin([st.session_state["value_bar"]])]
+    kw_bar = {"opacity": 0.5, "color": 'red'}
+    st.session_state['markers_bar'] = []
+
+    for _, row in filtered_data.iterrows():
+        st.session_state["markers_bar"].append(folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=1.5,  # Radius of the circle
+            popup=f"Latitude: {row['latitude']}, Longitude: {row['longitude']}",
+            **kw_bar
+            ))
+    fg = folium.FeatureGroup(name="Markers")
+    for marker in st.session_state["markers_bar"]:
+        fg.add_child(marker)
+        
 # Create a colormap
 # Define the colormap: Blue -> Green -> Red
 colormap = LinearColormap(
@@ -232,8 +252,12 @@ else:
         fig1 = px.histogram(filtered_data_1, x=attr1, title=f'Distribution of {attr1}')
         ret1 = st.plotly_chart(fig1, key="hist1", use_container_width=True, on_select='rerun')
         indices_bar_1 = ret1['selection']['point_indices'] if ret1 and 'selection' in ret1 else []
+        value = ret1['selection']["points"][0]['x'] if ret1['selection']["points"] else []
+        
         st.session_state["selected_indices_1"] = indices_bar_1
-
+        st.session_state['attr_bar'] = attr1
+        st.session_state['value_bar'] = value
+        
     # Second column: Attribute selection and histogram
     with col2:
         attr2 = st.selectbox("Select Attribute for Column 2", attributes, key="attr2", index=3)
@@ -245,6 +269,7 @@ else:
         fig2 = px.histogram(filtered_data_2, x=attr2, title=f'Distribution of {attr2}')
         ret2 = st.plotly_chart(fig2, key="hist2", use_container_width=True, on_select='rerun')
         indices_bar_2 = ret2['selection']['point_indices'] if ret2 and 'selection' in ret2 else []
+
         st.session_state["selected_indices_2"] = indices_bar_2
 
             
@@ -270,7 +295,10 @@ def create_parallel_coordinates(dataframe, selected_columns):
             ]
         )
     )
-    fig.update_layout(height=300)
+    fig.update_layout(
+        height=500,  # Increase height to ensure axes labels fit
+        margin=dict(l=50, r=50, t=50, b=0)  # Add bottom margin for better display of axes
+    )
     return fig
 
 # PCP Display
@@ -285,7 +313,7 @@ columns_for_pcp.append("Provoked/unprovoked")
 
 st.subheader("Parallel Coordinates Plot")
 
-default_columns = ["Shark.length.m", "Victim.age", "Time.in.water.min"]
+default_columns = ["Shark.length.m", "Time.in.water.min", "Provoked/unprovoked"]
 selected_columns = st.multiselect(
     "Select the attributes:",
     options=columns_for_pcp,  # Use filtered numeric columns for the Parallel Coordinates Plot
@@ -293,5 +321,5 @@ selected_columns = st.multiselect(
 )
 
 pcp_fig = create_parallel_coordinates(st.session_state["filtered_df"], selected_columns)
-st.plotly_chart(pcp_fig, use_container_width=True)
+st.plotly_chart(pcp_fig, use_container_width=False, height=1000, width=1000)
 
