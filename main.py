@@ -279,7 +279,6 @@ else:
 # Parallel Categories Plot preparation
 def create_parallel_coordinates(dataframe, selected_columns):
     # Define the numerical and categorical columns for the PCP
-    # selected_columns = ["Incident.year", "latitude", "longitude"]  # Add/modify relevant columns
     if 'Provoked/unprovoked' in selected_columns: 
         # Map values in the 'Provoked/unprovoked' column to 1 and 0
         mapping = {"provoked": 1, "unprovoked": 0}
@@ -290,14 +289,14 @@ def create_parallel_coordinates(dataframe, selected_columns):
         data=go.Parcoords(
             line=dict(color=dataframe["Incident.year"], colorscale="Viridis"),
             dimensions=[
-                dict(range=[dataframe[col].min(), dataframe[col].max()],
+                dict(range=[0, dataframe[col].max()],  # Start all axes from zero
                      label=col, values=dataframe[col]) for col in selected_columns
             ]
         )
     )
     fig.update_layout(
         height=500,  # Increase height to ensure axes labels fit
-        margin=dict(l=50, r=50, t=50, b=0)  # Add bottom margin for better display of axes
+        margin=dict(l=50, r=50, t=50, b=50)  # Add bottom margin for better display of axes
     )
     return fig
 
@@ -320,6 +319,6 @@ selected_columns = st.multiselect(
     default=[col for col in default_columns if col in columns_for_pcp]  # Preselect the default columns if they exist
 )
 
+# Create and display the PCP plot
 pcp_fig = create_parallel_coordinates(st.session_state["filtered_df"], selected_columns)
-st.plotly_chart(pcp_fig, use_container_width=False, height=1000, width=1000)
-
+st.plotly_chart(pcp_fig, use_container_width=True)
