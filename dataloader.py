@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 
 from datetime import datetime           # For temporal operations
+from global_land_mask import globe
 
 
 
@@ -62,6 +63,13 @@ def load_and_clean_data(df):
     except Exception as e:
         print(f"Error loading data: {e}")
         return None
+
+# Define a function to check if a point is in water
+def is_in_water(lat, lon):
+    return not globe.is_land(lat, lon)
+
+
+
 
 # Download the .xlsx file from the specified URL
 try:
@@ -149,6 +157,10 @@ df['Victim.injury'] = df['Victim.injury'].replace(
 # SECONDARY CLEANING OF THE DATA
 df = load_and_clean_data(df)
 
+# Apply the function to each row in the DataFrame to delete all this points that are not in water
+df = df[df.apply(lambda row: is_in_water(row['latitude'], row['longitude']), axis=1)].copy()
+
+# save the dataframe
 df.to_csv("./data/shark_data.csv")
 
 print("Process Exit Code: 1 (success)")
