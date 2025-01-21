@@ -26,8 +26,8 @@ theme = {
 
 # GLOBAL VARS
 st.session_state["DF"] = pd.read_csv("./data/shark_data.csv")
-center_lat = st.session_state["DF"]["latitude"].mean()
-center_lon = st.session_state["DF"]["longitude"].mean()
+center_lat = st.session_state["DF"]["Latitude"].mean()
+center_lon = st.session_state["DF"]["Longitude"].mean()
 min_year = int(st.session_state["DF"]['Incident.year'].min())
 max_year = int(st.session_state["DF"]['Incident.year'].max())
 
@@ -81,7 +81,7 @@ st.session_state["DF"] = st.session_state["DF"][
 ]
 
 # Prepare data for heatmap
-heat_data = st.session_state["DF"][['latitude', 'longitude']].values
+heat_data = st.session_state["DF"][['Latitude', 'Longitude']].values
 st.session_state["filtered_df"] = st.session_state["DF"]
 
 
@@ -94,9 +94,9 @@ kw = {"opacity": 0.1, "color": 'grey'}
 st.session_state['markers'] = []
 for _, row in st.session_state["DF"].iterrows():
     st.session_state["markers"].append(folium.CircleMarker(
-        location=[row["latitude"], row["longitude"]],
+        location=[row["Latitude"], row["Longitude"]],
         radius=1.5,  # Radius of the circle
-        popup=f"Latitude: {row['latitude']}, Longitude: {row['longitude']}",
+        popup=f"Latitude: {row['Latitude']}, Longitude: {row['Longitude']}",
         **kw
         ))
 
@@ -105,18 +105,16 @@ fg = folium.FeatureGroup(name="Markers")
 #     fg.add_child(marker)
     
 
-if ("selected_indices_1" and 'value_bar' in st.session_state):
+if 'selected_df_bar_1' in st.session_state:
     
-    filtered_data = st.session_state["DF"][st.session_state["DF"][st.session_state["attr_bar"]].isin([st.session_state["value_bar"]])]
-    kw_bar = {"opacity": 0.5, "color": 'red'}
     st.session_state['markers_bar'] = []
 
-    for _, row in filtered_data.iterrows():
+    for _, row in st.session_state["selected_df_bar_1"].iterrows():
         st.session_state["markers_bar"].append(folium.CircleMarker(
-            location=[row["latitude"], row["longitude"]],
+            location=[row["Latitude"], row["Longitude"]],
             radius=1.5,  # Radius of the circle
-            popup=f"Latitude: {row['latitude']}, Longitude: {row['longitude']}",
-            **kw_bar
+            popup=f"Latitude: {row['Latitude']}, Longitude: {row['Longitude']}",
+            **{"opacity": 0.5, "color": 'red'}
             ))
     fg = folium.FeatureGroup(name="Markers")
     for marker in st.session_state["markers_bar"]:
@@ -174,8 +172,8 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
 
         # Find rows matching the target coordinates within the tolerance
         selected_point_map = st.session_state["DF"][
-            (st.session_state["DF"]["latitude"].between(target_lat - tolerance, target_lat + tolerance)) &
-            (st.session_state["DF"]["longitude"].between(target_lon - tolerance, target_lon + tolerance))
+            (st.session_state["DF"]["Latitude"].between(target_lat - tolerance, target_lat + tolerance)) &
+            (st.session_state["DF"]["Longitude"].between(target_lon - tolerance, target_lon + tolerance))
         ]
         st.session_state["selected_regions"] = [selected_point_map]  # Reset to only one region
         st.session_state['filtered_df'] = selected_point_map  # Update filtered data to match the selected point
@@ -185,7 +183,7 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
         from shapely.geometry import Point, Polygon
         polygon = Polygon(selected_geometry['coordinates'][0])
         st.session_state["DF"]['is_in_region'] = st.session_state["DF"].apply(
-            lambda row: polygon.contains(Point(row['longitude'], row['latitude'])), axis=1
+            lambda row: polygon.contains(Point(row['Longitude'], row['Latitude'])), axis=1
         )
 
         # Filter points within the selected region
@@ -208,6 +206,8 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
 
 # THE BARS
 
+columns_to_exclude_bar = ["Unnamed: 0", "UIN", 'Latitude', 'Longitude', 'latitude', 'longitude', "Incident.year", "Location"]
+columns_for_bar = [col for col in st.session_state["DF"].columns if col not in columns_to_exclude_bar]
 if st.session_state.REG_2:
     # Remove 'Unnamed: 0' and 'UIN' columns from the selected regions
     st.session_state["selected_regions"][0] = st.session_state["selected_regions"][0].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
@@ -218,14 +218,14 @@ if st.session_state.REG_2:
 
     # First region bar chart
     with col1:
-        attr1 = st.selectbox("Select Attribute for First Region", st.session_state["selected_regions"][0].columns, key="attr1")
+        attr1 = st.selectbox("Select Attribute for First Region", columns_for_bar, key="attr1")
         fig1 = px.histogram(st.session_state["selected_regions"][0], x=attr1,
                             title=f"First Region: {attr1} Distribution")
         st.plotly_chart(fig1, use_container_width=True)
 
     # Second region bar chart
     with col2:
-        attr2 = st.selectbox("Select Attribute for Second Region", st.session_state["selected_regions"][1].columns, key="attr2")
+        attr2 = st.selectbox("Select Attribute for Second Region", columns_for_bar, key="attr2")
         fig2 = px.histogram(st.session_state["selected_regions"][1], x=attr2,
                             title=f"Second Region: {attr2} Distribution")
         st.plotly_chart(fig2, use_container_width=True)
@@ -234,8 +234,6 @@ else:
     # Single-region bar chart rendering
     col1, col2 = st.columns(2)
     
-    # List of attributes to choose from
-    attributes = [col for col in st.session_state["DF"].columns if col != 'Incident.year']
     if "selected_indices_2" not in st.session_state:
         st.session_state["selected_indices_2"] = []
     if "selected_indices_1" not in st.session_state:
@@ -243,34 +241,37 @@ else:
         
     # First column: Attribute selection and histogram
     with col1:
-        attr1 = st.selectbox("Select Attribute for Column 1", attributes, key="attr1", index=17)
-        filtered_data_1 = (
-            st.session_state["DF"].iloc[st.session_state["selected_indices_2"]]
-            if st.session_state["selected_indices_2"]
-            else st.session_state["filtered_df"]
-        )
-        fig1 = px.histogram(filtered_data_1, x=attr1, title=f'Distribution of {attr1}')
+        st.session_state['attr1'] = st.selectbox("Select Attribute for Column 1", columns_for_bar, index=11)
+        
+        # Filter rows in st.session_state['DF'] where UIN matches
+        filtered_data_1 = (st.session_state['DF'][st.session_state['DF']['UIN'].isin(st.session_state['selected_df_bar_2']['UIN'])]
+                       if ('selected_df_bar_2' in st.session_state) and (st.session_state['selected_df_bar_2']['UIN'].values.tolist())
+                       else st.session_state['DF'])
+        
+        fig1 = px.histogram(filtered_data_1, x=st.session_state['attr1'], title=f"Distribution of {st.session_state['attr1']}")
         ret1 = st.plotly_chart(fig1, key="hist1", use_container_width=True, on_select='rerun')
         indices_bar_1 = ret1['selection']['point_indices'] if ret1 and 'selection' in ret1 else []
-        value = ret1['selection']["points"][0]['x'] if ret1['selection']["points"] else []
         
         st.session_state["selected_indices_1"] = indices_bar_1
-        st.session_state['attr_bar'] = attr1
-        st.session_state['value_bar'] = value
+        st.session_state['selected_df_bar_1'] = filtered_data_1.reset_index().drop(columns=['index']).loc[indices_bar_1]
+    
         
     # Second column: Attribute selection and histogram
     with col2:
-        attr2 = st.selectbox("Select Attribute for Column 2", attributes, key="attr2", index=3)
-        filtered_data_2 = (
-            st.session_state["DF"].iloc[st.session_state["selected_indices_1"]]
-            if st.session_state["selected_indices_1"]
-            else st.session_state["filtered_df"]
-        )
-        fig2 = px.histogram(filtered_data_2, x=attr2, title=f'Distribution of {attr2}')
+        st.session_state['attr2'] = st.selectbox("Select Attribute for Column 2", columns_for_bar, index=1)
+        
+        # Filter rows in st.session_state['DF'] where UIN matches
+        filtered_data_2 = (st.session_state['DF'][st.session_state['DF']['UIN'].isin(st.session_state['selected_df_bar_1']['UIN'])]
+                       if st.session_state['selected_df_bar_1']['UIN'].values.tolist()
+                       else st.session_state['DF'])
+
+        # Plot the histogram 
+        fig2 = px.histogram(filtered_data_2, x=st.session_state['attr2'], title=f"Distribution of {st.session_state['attr2']}")
         ret2 = st.plotly_chart(fig2, key="hist2", use_container_width=True, on_select='rerun')
         indices_bar_2 = ret2['selection']['point_indices'] if ret2 and 'selection' in ret2 else []
 
         st.session_state["selected_indices_2"] = indices_bar_2
+        st.session_state['selected_df_bar_2'] = filtered_data_2.reset_index().drop(columns=['index']).loc[indices_bar_2]
 
             
 ##TODO: PCP Is shit, update it.
@@ -296,17 +297,18 @@ def create_parallel_coordinates(dataframe, selected_columns):
     )
     fig.update_layout(
         height=500,  # Increase height to ensure axes labels fit
-        margin=dict(l=50, r=50, t=50, b=50)  # Add bottom margin for better display of axes
+        margin=dict(l=50, r=50, t=50, b=50),  # Add bottom margin for better display of axes
+        font=dict(color='black')
     )
     return fig
 
 # PCP Display
 
 # Filter columns to include only numeric types (int and float)
-columns_to_exclude = ["Unnamed: 0", "UIN"]
+columns_to_exclude_pcp = ["Unnamed: 0", "UIN"]
 columns_for_pcp = [
     col for col in st.session_state["filtered_df"].select_dtypes(include=["float64", "int64"]).columns
-    if col not in columns_to_exclude
+    if col not in columns_to_exclude_pcp
 ]
 columns_for_pcp.append("Provoked/unprovoked")
 

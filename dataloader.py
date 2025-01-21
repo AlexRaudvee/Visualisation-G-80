@@ -30,6 +30,7 @@ def remove_high_nan_columns(df: pd.DataFrame, threshold: float = 0.95) -> pd.Dat
     columns_to_keep = nan_percentages[nan_percentages < threshold].index
     return df[columns_to_keep]
 
+
 def clean_coordinates(x):
     """Clean coordinate strings and convert to float."""
     if pd.isna(x):
@@ -40,6 +41,12 @@ def clean_coordinates(x):
     except:
         return None
     
+    
+def is_in_water(lat, lon):
+    """Check if a point is in water."""
+    return not globe.is_land(lat, lon)
+
+
 def load_and_clean_data(df):
     try:
         df = df
@@ -58,16 +65,13 @@ def load_and_clean_data(df):
         # Remove rows with invalid coordinates
         df = df.dropna(subset=['Latitude', 'Longitude'])
 
+        # Apply the function to each row in the DataFrame to delete all this points that are not in water
+        # df = df[df.apply(lambda row: is_in_water(row['Latitude'], row['Longitude']), axis=1)].copy()
 
         return df
     except Exception as e:
         print(f"Error loading data: {e}")
         return None
-
-# Define a function to check if a point is in water
-def is_in_water(lat, lon):
-    return not globe.is_land(lat, lon)
-
 
 
 
@@ -116,51 +120,38 @@ except Exception as e:
     # Handle errors if loading the CSV fails
     print(f"An error occurred while loading the CSV: {e}")
 
+print(f"Shape of the Original Dataframe: {df.shape}")
 
-
-# FIRST STAGE CLEANING OF THE DATA
+# FIRST STAGE CLEANING OF THE DATA CLEANING
 df = df.loc[:, ~df.columns.isin(["Site.category.comment", "Shark.identification.source", "Tidal.cycle", "Weather.condition",
                                 "Fish.speared?", "Commercial.dive.activity", "Object.of.bite", 
                                 "Direction.first.strike", "Shark.captured", "Other.clothing.colour", 
                                 "Clothing.pattern", "Fin.colour", "Diversionary.action.taken", "Diversionary.action.outcome",
-                                "People <3m", "People 3-15m", "Unnamed: 59"])]  
+                                "People <3m", "People 3-15m", "Unnamed: 59", "Data.source", "Shark.identification.method", "Basis.for.length", "Present.at.time.of.bite", "Reference"])]  
 
-# Filter out rows based on the threshold for missing values
-threshold = 0.1  # Define a threshold for the proportion of missing data (7.5%)
+# Rename values in df
+values_to_rename_activity = {'snorkelling': 'snorkeling', 
+                    'diving, collecting': 'diving',
+                    'paddleboarding': 'boarding',
+                    'surfing': 'boarding',
+                    'motorised boating': 'boating',
+                    'unmotorised boating': "boating",
+                    "other: jetskiing; swimming":"other",
+                    "other: hull scraping": "other",
+                    "other: standing in water": "other",
+                    "other:floating": "other"}
 
-# Calculate the maximum number of rows allowed to have missing values based on the threshold
-total_rows = len(df)
-max_missing = total_rows * threshold
+values_to_rename_injury = {'Injured': 'injured', 'injury': 'injured'}
 
-# Identify columns where the count of NaNs is below the threshold
-columns_to_filter = [col for col in df.columns if df[col].isna().sum() < max_missing]
-
-# Drop rows where selected columns have NaN values
-df = df.dropna(subset=columns_to_filter)
-
-
-# Convert latitude and longitude to numeric (float)
-try:
-    df["latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")  # Convert to float, invalid entries become NaN
-    df["longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")  # Convert to float, invalid entries become NaN
-except Exception as e:
-    print(f"Error converting latitude/longitude to numeric: {e}")
-
-# Drop rows with missing or invalid latitude/longitude values
-df = df.dropna(subset=["latitude", "longitude"])
-
-# Rename values in the 'Victim.injury' column
-df['Victim.injury'] = df['Victim.injury'].replace(
-    {'Injured': 'injured', 'injury': 'injured'}
-)
+df['Victim.injury'] = df['Victim.injury'].replace(values_to_rename_injury)
+df['Victim.activity'] = df['Victim.activity'].replace(values_to_rename_activity)
 
 # SECONDARY CLEANING OF THE DATA
 df = load_and_clean_data(df)
-
-# Apply the function to each row in the DataFrame to delete all this points that are not in water
-df = df[df.apply(lambda row: is_in_water(row['latitude'], row['longitude']), axis=1)].copy()
+print(df['Time.of.incident'])
 
 # save the dataframe
 df.to_csv("./data/shark_data.csv")
 
+print(f"Shape of Clean Dataframe: {df.shape}")
 print("Process Exit Code: 1 (success)")
