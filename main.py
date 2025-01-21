@@ -206,30 +206,32 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
 
 # THE BARS
 
-columns_to_exclude_bar = ["Unnamed: 0", "UIN", 'Latitude', 'Longitude', 'latitude', 'longitude', "Incident.year", "Location"]
+columns_to_exclude_bar = ["Unnamed: 0", "UIN", 'Latitude', 'Longitude', 'latitude', 'longitude', "Incident.year", "Location", "is_in_region"]
 columns_for_bar = [col for col in st.session_state["DF"].columns if col not in columns_to_exclude_bar]
 if st.session_state.REG_2:
     # Remove 'Unnamed: 0' and 'UIN' columns from the selected regions
-    st.session_state["selected_regions"][0] = st.session_state["selected_regions"][0].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
-    st.session_state["selected_regions"][1] = st.session_state["selected_regions"][1].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
+    try:
+        st.session_state["selected_regions"][0] = st.session_state["selected_regions"][0].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
+        st.session_state["selected_regions"][1] = st.session_state["selected_regions"][1].drop(columns=["Unnamed: 0", "UIN"], errors="ignore")
+   
+        # Display bar charts for two selected regions
+        col1, col2 = st.columns(2)
 
-    # Display bar charts for two selected regions
-    col1, col2 = st.columns(2)
+        # First region bar chart
+        with col1:
+            attr1 = st.selectbox("Select Attribute for First Region", columns_for_bar, key="attr1", index=1)
+            fig1 = px.histogram(st.session_state["selected_regions"][0], x=attr1,
+                                title=f"First Region: {attr1} Distribution")
+            st.plotly_chart(fig1, use_container_width=True)
 
-    # First region bar chart
-    with col1:
-        attr1 = st.selectbox("Select Attribute for First Region", columns_for_bar, key="attr1")
-        fig1 = px.histogram(st.session_state["selected_regions"][0], x=attr1,
-                            title=f"First Region: {attr1} Distribution")
-        st.plotly_chart(fig1, use_container_width=True)
-
-    # Second region bar chart
-    with col2:
-        attr2 = st.selectbox("Select Attribute for Second Region", columns_for_bar, key="attr2")
-        fig2 = px.histogram(st.session_state["selected_regions"][1], x=attr2,
-                            title=f"Second Region: {attr2} Distribution")
-        st.plotly_chart(fig2, use_container_width=True)
-
+        # Second region bar chart
+        with col2:
+            attr2 = st.selectbox("Select Attribute for Second Region", columns_for_bar, key="attr2", index=1)
+            fig2 = px.histogram(st.session_state["selected_regions"][1], x=attr2,
+                                title=f"Second Region: {attr2} Distribution")
+            st.plotly_chart(fig2, use_container_width=True)
+    except:
+        st.warning("Please Select Two Regions")
 else:
     # Single-region bar chart rendering
     col1, col2 = st.columns(2)
@@ -241,7 +243,7 @@ else:
         
     # First column: Attribute selection and histogram
     with col1:
-        st.session_state['attr1'] = st.selectbox("Select Attribute for Column 1", columns_for_bar, index=11)
+        st.session_state['attr1'] = st.selectbox("Select Attribute for Column 1", columns_for_bar, index=10)
         
         # Filter rows in st.session_state['DF'] where UIN matches
         filtered_data_1 = (st.session_state['DF'][st.session_state['DF']['UIN'].isin(st.session_state['selected_df_bar_2']['UIN'])]
