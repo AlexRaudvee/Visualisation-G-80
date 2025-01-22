@@ -20,16 +20,13 @@ from streamlit_js_eval import streamlit_js_eval
 st.set_page_config(layout='wide', 
                    initial_sidebar_state="collapsed",
                    )
-theme = {
-    "base": "light"
-}
 
 # GLOBAL VARS
-st.session_state["DF"] = pd.read_csv("./data/shark_data.csv")
-center_lat = st.session_state["DF"]["Latitude"].mean()
-center_lon = st.session_state["DF"]["Longitude"].mean()
-min_year = int(st.session_state["DF"]['Incident.year'].min())
-max_year = int(st.session_state["DF"]['Incident.year'].max())
+st.session_state.DF = pd.read_csv("./data/shark_data.csv")
+center_lat = st.session_state.DF["Latitude"].mean()
+center_lon = st.session_state.DF["Longitude"].mean()
+min_year = int(st.session_state.DF['Incident.year'].min())
+max_year = int(st.session_state.DF['Incident.year'].max())
 
 
 # SIDEBAR AT THE LEFT
@@ -42,9 +39,9 @@ with st.sidebar:
     # Time range slider
     year_range = st.slider(
         "Select Year Range",
-        min_value=int(st.session_state["DF"]['Incident.year'].min()),
-        max_value=int(st.session_state["DF"]['Incident.year'].max()),
-        value=(int(st.session_state["DF"]['Incident.year'].min()), int(st.session_state["DF"]['Incident.year'].max()))
+        min_value=int(st.session_state.DF['Incident.year'].min()),
+        max_value=int(st.session_state.DF['Incident.year'].max()),
+        value=(int(st.session_state.DF['Incident.year'].min()), int(st.session_state.DF['Incident.year'].max()))
     )
 
     col1_side, col2_side = st.columns(2)
@@ -66,23 +63,23 @@ with st.sidebar:
                 st.write("Selection for two regions is OFF")
                 
 # Filter data based on time range
-st.session_state['DF'] = st.session_state["DF"][(st.session_state["DF"]['Incident.year'] >= year_range[0]) &
-                 (st.session_state["DF"]['Incident.year'] <= year_range[1])]
+st.session_state['DF'] = st.session_state.DF[(st.session_state.DF['Incident.year'] >= year_range[0]) &
+                 (st.session_state.DF['Incident.year'] <= year_range[1])]
 
 
     
 # PREPARATION OF DATA
-st.session_state["DF"]['Incident.year'] = pd.to_numeric(st.session_state["DF"]['Incident.year'], errors='coerce')
+st.session_state.DF['Incident.year'] = pd.to_numeric(st.session_state.DF['Incident.year'], errors='coerce')
 
 # Filter the DataFrame based on the selected year range
-st.session_state["DF"] = st.session_state["DF"][
-    (st.session_state["DF"]['Incident.year'] >= year_range[0]) &
-    (st.session_state["DF"]['Incident.year'] <= year_range[1])
+st.session_state.DF = st.session_state.DF[
+    (st.session_state.DF['Incident.year'] >= year_range[0]) &
+    (st.session_state.DF['Incident.year'] <= year_range[1])
 ]
 
 # Prepare data for heatmap
-heat_data = st.session_state["DF"][['Latitude', 'Longitude']].values
-st.session_state["filtered_df"] = st.session_state["DF"]
+heat_data = st.session_state.DF[['Latitude', 'Longitude']].values
+st.session_state["filtered_df"] = st.session_state.DF
 
 
 
@@ -90,20 +87,19 @@ st.session_state["filtered_df"] = st.session_state["DF"]
 st.session_state['m'] = folium.Map(location=[center_lat, center_lon], zoom_start=8)
 
 # Add markers for each point in the filtered DataFrame
-kw = {"opacity": 0.1, "color": 'grey'}
-st.session_state['markers'] = []
-for _, row in st.session_state["DF"].iterrows():
-    st.session_state["markers"].append(folium.CircleMarker(
-        location=[row["Latitude"], row["Longitude"]],
-        radius=1.5,  # Radius of the circle
-        popup=f"Latitude: {row['Latitude']}, Longitude: {row['Longitude']}",
-        **kw
-        ))
+# kw = {"opacity": 0.1, "color": 'grey'}
+# st.session_state['markers'] = []
+# for _, row in st.session_state.DF.iterrows():
+#     st.session_state["markers"].append(folium.CircleMarker(
+#         location=[row["Latitude"], row["Longitude"]],
+#         radius=1.5,  # Radius of the circle
+#         tooltip=f"UIN: {row['UIN']}",
+#         **kw
+#         ))
 
-fg = folium.FeatureGroup(name="Markers")
+# fg = folium.FeatureGroup(name="Markers")
 # for marker in st.session_state["markers"]:
 #     fg.add_child(marker)
-    
 
 if 'selected_df_bar_1' in st.session_state:
     
@@ -113,7 +109,7 @@ if 'selected_df_bar_1' in st.session_state:
         st.session_state["markers_bar"].append(folium.CircleMarker(
             location=[row["Latitude"], row["Longitude"]],
             radius=1.5,  # Radius of the circle
-            popup=f"Latitude: {row['Latitude']}, Longitude: {row['Longitude']}",
+            popup=f"UIN: {row['UIN']}",
             **{"opacity": 0.5, "color": 'red'}
             ))
     fg = folium.FeatureGroup(name="Markers")
@@ -149,7 +145,7 @@ map_select_data = st_folium(st.session_state['m'],
                     zoom=4,
                     key="new",
                     returned_objects=["last_object_clicked_tooltip", "last_object_clicked", "last_object_clicked_popup", "last_active_drawing"],
-                    feature_group_to_add=fg,
+                    feature_group_to_add=(fg if "selected_df_bar_1" in st.session_state else None),
                     height=700,
                     width=1300)
 
@@ -171,9 +167,9 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
         target_lon = selected_geometry['coordinates'][0]
 
         # Find rows matching the target coordinates within the tolerance
-        selected_point_map = st.session_state["DF"][
-            (st.session_state["DF"]["Latitude"].between(target_lat - tolerance, target_lat + tolerance)) &
-            (st.session_state["DF"]["Longitude"].between(target_lon - tolerance, target_lon + tolerance))
+        selected_point_map = st.session_state.DF[
+            (st.session_state.DF["Latitude"].between(target_lat - tolerance, target_lat + tolerance)) &
+            (st.session_state.DF["Longitude"].between(target_lon - tolerance, target_lon + tolerance))
         ]
         st.session_state["selected_regions"] = [selected_point_map]  # Reset to only one region
         st.session_state['filtered_df'] = selected_point_map  # Update filtered data to match the selected point
@@ -182,12 +178,12 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
         # Handle polygon selection
         from shapely.geometry import Point, Polygon
         polygon = Polygon(selected_geometry['coordinates'][0])
-        st.session_state["DF"]['is_in_region'] = st.session_state["DF"].apply(
+        st.session_state.DF['is_in_region'] = st.session_state.DF.apply(
             lambda row: polygon.contains(Point(row['Longitude'], row['Latitude'])), axis=1
         )
 
         # Filter points within the selected region
-        points_in_region_map = st.session_state["DF"][st.session_state["DF"]['is_in_region']]
+        points_in_region_map = st.session_state.DF[st.session_state.DF['is_in_region']]
 
         # Append the dataframe to the selected_regions list
         region_id = hash(points_in_region_map.to_csv(index=False))
@@ -207,7 +203,7 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
 # THE BARS
 
 columns_to_exclude_bar = ["Unnamed: 0", "UIN", 'Latitude', 'Longitude', 'latitude', 'longitude', "Incident.year", "Location", "is_in_region"]
-columns_for_bar = [col for col in st.session_state["DF"].columns if col not in columns_to_exclude_bar]
+columns_for_bar = [col for col in st.session_state.DF.columns if col not in columns_to_exclude_bar]
 if st.session_state.REG_2:
     # Remove 'Unnamed: 0' and 'UIN' columns from the selected regions
     try:
@@ -256,7 +252,7 @@ else:
         
         st.session_state["selected_indices_1"] = indices_bar_1
         st.session_state['selected_df_bar_1'] = filtered_data_1.reset_index().drop(columns=['index']).loc[indices_bar_1]
-    
+
         
     # Second column: Attribute selection and histogram
     with col2:

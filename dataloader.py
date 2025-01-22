@@ -148,7 +148,10 @@ df['Victim.activity'] = df['Victim.activity'].replace(values_to_rename_activity)
 
 # SECONDARY CLEANING OF THE DATA
 df = load_and_clean_data(df)
-print(df['Time.of.incident'])
+
+# UINs that are not in water
+uin_to_exclude = [1211, 629, 646, 1226, 1120, 1121, 1106, 647, 747, 1226, 1047, 1064, 1205, 1089]
+df = df[~df['UIN'].isin(uin_to_exclude)]
 
 # save the dataframe
 df.to_csv("./data/shark_data.csv")
