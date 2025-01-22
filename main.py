@@ -196,7 +196,7 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
         if len(st.session_state["selected_regions"]) > 2:
             st.session_state["selected_regions"] = st.session_state["selected_regions"][-2:]
 
-        st.session_state['filtered_df'] = points_in_region_map  # Update filtered data
+        st.session_state.DF = points_in_region_map  # Update filtered data
 
 
 
@@ -320,5 +320,5 @@ selected_columns = st.multiselect(
 )
 
 # Create and display the PCP plot
-pcp_fig = create_parallel_coordinates(st.session_state["filtered_df"], selected_columns)
+pcp_fig = create_parallel_coordinates(st.session_state.DF, selected_columns)
 st.plotly_chart(pcp_fig, use_container_width=True)
