@@ -153,6 +153,14 @@ df = load_and_clean_data(df)
 uin_to_exclude = [1211, 629, 646, 1226, 1120, 1121, 1106, 647, 747, 1226, 1047, 1064, 1205, 1089]
 df = df[~df['UIN'].isin(uin_to_exclude)]
 
+# Date addition
+# Create a new Date column
+df['Date'] = pd.to_datetime(
+    df.assign(Incident_day=1)[['Incident.year', 'Incident.month', 'Incident_day']].rename(
+        columns={'Incident.year': 'year', 'Incident.month': 'month', 'Incident_day': 'day'}
+    )
+)
+
 # save the dataframe
 df.to_csv("./data/shark_data.csv")
 

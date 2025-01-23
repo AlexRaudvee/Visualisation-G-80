@@ -202,7 +202,7 @@ if map_select_data and 'last_active_drawing' in map_select_data and map_select_d
 
 # THE BARS
 
-columns_to_exclude_bar = ["Unnamed: 0", "UIN", 'Latitude', 'Longitude', 'latitude', 'longitude', "Incident.year", "Location", "is_in_region"]
+columns_to_exclude_bar = ["Unnamed: 0", "UIN", 'Latitude', 'Longitude', 'latitude', 'longitude', "Incident.year", "Location", "is_in_region", "Date"]
 columns_for_bar = [col for col in st.session_state.DF.columns if col not in columns_to_exclude_bar]
 if st.session_state.REG_2:
     # Remove 'Unnamed: 0' and 'UIN' columns from the selected regions
@@ -303,7 +303,7 @@ def create_parallel_coordinates(dataframe, selected_columns):
 # PCP Display
 
 # Filter columns to include only numeric types (int and float)
-columns_to_exclude_pcp = ["Unnamed: 0", "UIN"]
+columns_to_exclude_pcp = ["Unnamed: 0", "UIN", "Date"]
 columns_for_pcp = [
     col for col in st.session_state["filtered_df"].select_dtypes(include=["float64", "int64"]).columns
     if col not in columns_to_exclude_pcp
